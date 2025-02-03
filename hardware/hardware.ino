@@ -35,9 +35,14 @@
  
 
 // DEFINE VARIABLES
-#define ARDUINOJSON_USE_DOUBLE      1 
+#define ARDUINOJSON_USE_DOUBLE      1
 
 // DEFINE THE CONTROL PINS FOR THE DHT22 
+#define NUMLDS 7
+#define CLOCK_PIN 13
+#define DATA_PIN 35
+#define DHTPIN 19
+#define DHTTYPE DHT22
 
 
 
@@ -102,7 +107,7 @@ void setup() {
   // INITIALIZE ALL SENSORS AND DEVICES
   
   /* Add all other necessary sensor Initializations and Configurations here */
-
+ 
 
   initialize();     // INIT WIFI, MQTT & NTP 
   // vButtonCheckFunction(); // UNCOMMENT IF USING BUTTONS INT THIS LAB, THEN ADD LOGIC FOR INTERFACING WITH BUTTONS IN THE vButtonCheck FUNCTION
@@ -152,18 +157,28 @@ void vUpdate( void * pvParameters )  {
               // ##Publish update according to ‘{"id": "student_id", "timestamp": 1702212234, "temperature": 30, "humidity":90, "heatindex": 30}’
 
               // 1. Create JSon object
+              JsonDocument doc;
               
               // 2. Create message buffer/array to store serialized JSON object
+              char message[1100]  = {0};
               
               // 3. Add key:value pairs to JSon object based on above schema
+              doc["id"]         = "6200162206";
+              doc["timestamp"]  = getTimeStamp();
+              doc["temperature"]     = t;
+              doc["humidity"]       = h;
+              doc["heatindex"]       = convert_fahrenheit_to_Celsius(calcHeatIndex(convert_Celsius_to_fahrenheit(t), h));
 
               // 4. Seralize / Covert JSon object to JSon string and store in message array
+              serializeJson(doc, message);
                
-              // 5. Publish message to a topic sobscribed to by both backend and frontend                
-
-          }
-
-          
+              // 5. Publish message to a topic sobscribed to by both backend and frontend              
+              if(mqtt.connected() ){
+                  publish(pubtopic, message);
+              }
+      
+      }
+      
             
         vTaskDelay(1000 / portTICK_PERIOD_MS);  
     }
@@ -210,10 +225,28 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   if (strcmp(type, "controls") == 0){
     // 1. EXTRACT ALL PARAMETERS: NODES, RED,GREEN, BLUE, AND BRIGHTNESS FROM JSON OBJECT
+    const int brightness = doc["brightness"];
+    const int leds = doc["leds"];
+    const int red = doc["color"]["r"];
+    const int green = doc["color"]["g"];
+    const int blue = doc["color"]["b"];
+    const int alpha = doc["color"]["a"];    
 
     // 2. ITERATIVELY, TURN ON LED(s) BASED ON THE VALUE OF NODES. Ex IF NODES = 2, TURN ON 2 LED(s)
+    for(int x=0; x<leds; x++){
+      ledArray[x] = CRGB( red, green, blue); // R, G, B range for each value is 0 to 255
+      FastLED.setBrightness( brightness ); // Ranges from 0 to 255
+      FastLED.show(); // Send changes to LED array
+      vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
 
     // 3. ITERATIVELY, TURN OFF ALL REMAINING LED(s).
+    for(int x=leds; x<NUM_LEDS; x++){
+      ledArray[x] = CRGB::Black;
+      FastLED.setBrightness( brightness );
+      FastLED.show();
+      vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
    
   }
 }
@@ -239,16 +272,19 @@ bool publish(const char *topic, const char *payload){
 //***** Complete the util functions below ******
 
 double convert_Celsius_to_fahrenheit(double c){    
-    // CONVERTS INPUT FROM °C TO °F. RETURN RESULTS     
+    // CONVERTS INPUT FROM °C TO °F. RETURN RESULTS
+    return (9/5)*c+32;     
 }
 
 double convert_fahrenheit_to_Celsius(double f){    
-    // CONVERTS INPUT FROM °F TO °C. RETURN RESULT    
+    // CONVERTS INPUT FROM °F TO °C. RETURN RESULT
+    return (f-32)*5/9; 
+
 }
 
 double calcHeatIndex(double Temp, double Humid){
     // CALCULATE AND RETURN HEAT INDEX USING EQUATION FOUND AT https://byjus.com/heat-index-formula/#:~:text=The%20heat%20index%20formula%20is,an%20implied%20humidity%20of%2020%25
-  
+    return -42.379 + (2.04901523 * Temp) + (10.14333127 * Humid) - (0.22475541 * Temp * Humid) - (0.00683783 * Temp * Temp) - (0.05481717 * Humid * Humid) + (0.00122874 * Temp * Temp * Humid) + (0.00085282 * Temp * Humid * Humid) - (0.00000199 * Temp * Temp * Humid * Humid);
 }
  
 
