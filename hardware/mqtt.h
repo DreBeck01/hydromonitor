@@ -92,7 +92,7 @@ void MQTT_ConnectFunction( void ) {
   xReturned = xTaskCreatePinnedToCore(
                 MQTT_Connect,     /* Function that implements the task. */
                 "MQTT CONNECT",    /* Text name for the task. */
-                2048,                     /* Stack size (Bytes in ESP32, words in Vanilla FreeRTOS) */
+                4096,                     /* Stack size (Bytes in ESP32, words in Vanilla FreeRTOS) */
                 ( void * ) 1,             /* Parameter passed into the task. */
                 8,                        /* Priority at which the task is created. */
                 &xMQTT_Connect,    /* Used to pass out the created task's handle. */
@@ -179,8 +179,7 @@ void checkHEAP(const char* Name){
 }
 
 
-void initialize(void){
-  vNTPFunction();     // INIT NTP PROTOCOL FOR TIME KEEPING   
+void initialize(void){   
 
   //CONNECT TO WIFI
   Serial.printf("Connecting to %s \n", ssid);
@@ -192,7 +191,8 @@ void initialize(void){
   }
 
   Serial.println("\n\n***** Wi-Fi CONNECTED! *****\n\n");
-   
+  
+  vNTPFunction();     // INIT NTP PROTOCOL FOR TIME KEEPING
   initMQTT();          // INIT MQTT  
   vUpdateFunction();
    

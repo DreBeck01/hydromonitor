@@ -10,6 +10,9 @@
 
 // ADD YOUR IMPORTS HERE
 
+#ifndef FastLED_H
+#include <FastLED.h> 
+#endif
 
 
 #ifndef _WIFI_H 
@@ -31,16 +34,16 @@
 #ifndef ARDUINOJSON_H
 #include <ArduinoJson.h>
 #endif
-
+#include "DHT.h"
  
 
 // DEFINE VARIABLES
 #define ARDUINOJSON_USE_DOUBLE      1
 
 // DEFINE THE CONTROL PINS FOR THE DHT22 
-#define NUMLDS 7
+#define NUM_LEDS 7
 #define CLOCK_PIN 13
-#define DATA_PIN 35
+#define DATA_PIN 26
 #define DHTPIN 19
 #define DHTTYPE DHT22
 
@@ -48,19 +51,19 @@
 
 
 // MQTT CLIENT CONFIG  
-static const char* pubtopic      = "620012345";                    // Add your ID number here
-static const char* subtopic[]    = {"620012345_sub","/elet2415"};  // Array of Topics(Strings) to subscribe to
-static const char* mqtt_server   = "local";         // Broker IP address or Domain name as a String 
+static const char* pubtopic      = "620152210";                    // Add your ID number here
+static const char* subtopic[]    = {"620152210_sub","/elet2415"};  // Array of Topics(Strings) to subscribe to
+static const char* mqtt_server   = "broker.emqx.io";         // Broker IP address or Domain name as a String 
 static uint16_t mqtt_port        = 1883;
 
 // WIFI CREDENTIALS
-const char* ssid       = "YOUR_SSID";     // Add your Wi-Fi ssid
-const char* password   = "YOUR_PASSWORD"; // Add your Wi-Fi password 
+const char* ssid                  = "Dre"; // Add your Wi-Fi ssid
+const char* password              = "hz9awttj"; // Add your Wi-Fi password  
 
 
 
 
-// TASK HANDLES 
+// TASK HANDLES   
 TaskHandle_t xMQTT_Connect          = NULL; 
 TaskHandle_t xNTPHandle             = NULL;  
 TaskHandle_t xLOOPHandle            = NULL;  
@@ -86,6 +89,7 @@ double calcHeatIndex(double Temp, double Humid);
 
 
 /* Init class Instances for the DHT22 etcc */
+DHT dht (DHTPIN, DHTTYPE);
  
   
 
@@ -99,14 +103,16 @@ double calcHeatIndex(double Temp, double Humid);
 #endif
 
 // Temporary Variables 
-
+CRGB ledArray[NUM_LEDS];
 
 void setup() {
   Serial.begin(115200);  // INIT SERIAL  
 
   // INITIALIZE ALL SENSORS AND DEVICES
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(ledArray, NUM_LEDS);
   
   /* Add all other necessary sensor Initializations and Configurations here */
+  dht.begin();
  
 
   initialize();     // INIT WIFI, MQTT & NTP 
@@ -147,10 +153,10 @@ void vUpdate( void * pvParameters )  {
           // #######################################################
    
           // 1. Read Humidity and save in variable below
-          double h = 0;
+          double h = dht.readHumidity();
            
           // 2. Read temperature as Celsius   and save in variable below
-          double t = 0;    
+          double t = dht.readTemperature();    
  
 
           if(isNumber(t)){
@@ -163,7 +169,7 @@ void vUpdate( void * pvParameters )  {
               char message[1100]  = {0};
               
               // 3. Add key:value pairs to JSon object based on above schema
-              doc["id"]         = "6200162206";
+              doc["id"]         = "620152210";
               doc["timestamp"]  = getTimeStamp();
               doc["temperature"]     = t;
               doc["humidity"]       = h;
